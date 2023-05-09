@@ -10,6 +10,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import boardApi from "../api/boardApi";
 import EmojiPicker from "../components/common/EmojiPicker";
 import Kanban from "../components/common/Kanban";
+import { setBoards } from "../redux/features/boardSlice";
+
+let timer;
+
 const Board = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -27,7 +31,6 @@ const Board = () => {
     const getBoard = async () => {
       try {
         const res = await boardApi.getOne(boardId);
-        console.log({ res });
         setTitle(res.title);
         setDescription(res.description);
         setSections(res.sections);
@@ -41,11 +44,54 @@ const Board = () => {
     getBoard();
   }, [boardId]);
 
+  const onIconChange = async (newIcon) => {
+    let temp = [...boards];
+    const index = temp.findIndex((e) => e.id === boardId);
+    temp[index] = { ...temp[index], icon: newIcon };
+
+    setIcon(newIcon);
+    dispatch(setBoards(temp));
+    try {
+      await boardApi.update(boardId, { icon: newIcon });
+    } catch (err) {
+      alert(err);
+    }
+  };
+  const updateTitle = (e) => {
+    clearTimeout(timer);
+    const newTitle = e.target.value;
+    setTitle(newTitle);
+
+    let temp = [...boards];
+    const index = temp.findIndex((e) => e.id === boardId);
+    temp[index] = { ...temp[index], title: newTitle };
+    console.log(temp[index]);
+    dispatch(setBoards(temp));
+
+    timer = setTimeout(async () => {
+      try {
+        await boardApi.update(boardId, { title: newTitle });
+      } catch (err) {
+        alert(err);
+      }
+    }, 500);
+  };
+
+  const updateDescription = async (e) => {
+    clearTimeout(timer);
+    const newDescription = e.target.value;
+    setDescription(newDescription);
+    timer = setTimeout(async () => {
+      try {
+        await boardApi.update(boardId, { description: newDescription });
+      } catch (err) {
+        alert(err);
+      }
+    }, 500);
+  };
+
   const addFavourite = () => {};
   const deleteBoard = () => {};
-  const onIconChange = () => {};
-  const updateTitle = () => {};
-  const updateDescription = () => {};
 
   return (
     <>
@@ -68,7 +114,7 @@ const Board = () => {
           <DeleteOutlined />
         </IconButton>
       </Box>
-      <Box>
+      <Box sx={{ padding: "10px 50px" }}>
         <Box>
           <EmojiPicker icon={icon} onChange={onIconChange} />
           <TextField
@@ -96,7 +142,7 @@ const Board = () => {
             sx={{
               "& .MuiOutlinedInput-input": { padding: 0 },
               "& .MuiOutlinedInput-notchedOutline": { border: "unset " },
-              "& .MuiOutlinedInput-root": { fontSize: "0.8rem" },
+              "& .MuiOutlinedInput-root": { fontSize: "0.84rem" },
             }}
           />
         </Box>
