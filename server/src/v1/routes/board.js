@@ -11,6 +11,18 @@ router.get("/", tokenHandler.verifyToken, boardController.getAll);
 router.put("/", tokenHandler.verifyToken, boardController.updatePosition);
 
 router.get(
+  "/favourites",
+  tokenHandler.verifyToken,
+  boardController.getFavourites
+);
+
+router.put(
+  "/favourites",
+  tokenHandler.verifyToken,
+  boardController.updateFavouritePosition
+);
+
+router.get(
   "/:boardId",
   param("boardId").custom((value) => {
     if (!validation.isObjectId(value)) {
@@ -32,6 +44,18 @@ router.put(
   validation.validate,
   tokenHandler.verifyToken,
   boardController.update
+);
+
+router.delete(
+  "/:boardId",
+  param("boardId").custom((value) => {
+    if (!validation.isObjectId(value)) {
+      return Promise.reject("invalid id");
+    } else return Promise.resolve();
+  }),
+  validation.validate,
+  tokenHandler.verifyToken,
+  boardController.delete
 );
 
 module.exports = router;

@@ -11,6 +11,7 @@ import boardApi from "../api/boardApi";
 import EmojiPicker from "../components/common/EmojiPicker";
 import Kanban from "../components/common/Kanban";
 import { setBoards } from "../redux/features/boardSlice";
+import { setFavouriteList } from "../redux/features/favouriteSlice";
 
 let timer;
 
@@ -25,7 +26,7 @@ const Board = () => {
   const [icon, setIcon] = useState("");
 
   const boards = useSelector((state) => state.board.value);
-  // const favouriteList = useSelector((state) => state.favourites.value);
+  const favouriteList = useSelector((state) => state.favourites.value);
 
   useEffect(() => {
     const getBoard = async () => {
@@ -49,6 +50,16 @@ const Board = () => {
     const index = temp.findIndex((e) => e.id === boardId);
     temp[index] = { ...temp[index], icon: newIcon };
 
+    if (isFavourite) {
+      let tempFavourite = [...favouriteList];
+      const favouriteIndex = tempFavourite.findIndex((e) => e.id === boardId);
+      tempFavourite[favouriteIndex] = {
+        ...tempFavourite[favouriteIndex],
+        icon: newIcon,
+      };
+      dispatch(setFavouriteList(tempFavourite));
+    }
+
     setIcon(newIcon);
     dispatch(setBoards(temp));
     try {
@@ -65,7 +76,17 @@ const Board = () => {
     let temp = [...boards];
     const index = temp.findIndex((e) => e.id === boardId);
     temp[index] = { ...temp[index], title: newTitle };
-    console.log(temp[index]);
+
+    if (isFavourite) {
+      let tempFavourite = [...favouriteList];
+      const favouriteIndex = tempFavourite.findIndex((e) => e.id === boardId);
+      tempFavourite[favouriteIndex] = {
+        ...tempFavourite[favouriteIndex],
+        title: newTitle,
+      };
+      dispatch(setFavouriteList(tempFavourite));
+    }
+
     dispatch(setBoards(temp));
 
     timer = setTimeout(async () => {
@@ -90,9 +111,41 @@ const Board = () => {
     }, 500);
   };
 
-  const addFavourite = () => {};
-  const deleteBoard = () => {};
+  const addFavourite = async () => {
+    try {
+      const board = await boardApi.update(boardId, { favourite: !isFavourite });
+      setIsFavourite(!isFavourite);
+      let newFavouriteList = [...favouriteList];
+      if (isFavourite) {
+        newFavouriteList = newFavouriteList.filter((e) => e.id !== boardId);
+      } else {
+        newFavouriteList.unshift(board);
+      }
+      dispatch(setFavouriteList(newFavouriteList));
+      setIsFavourite(!isFavourite);
+    } catch (err) {
+      alert(err);
+    }
+  };
 
+  const deleteBoard = async () => {
+    try {
+      await boardApi.delete(boardId);
+      if (isFavourite) {
+        const newFavouriteList = favouriteList.filter((e) => e.id !== boardId);
+        dispatch(setFavouriteList(newFavouriteList));
+      }
+      const newList = boards.filter((e) => e.id !== boardId);
+      if (newList.length === 0) {
+        navigate("/boards");
+      } else {
+        navigate(`/boards/${newList[0].id}`);
+      }
+      dispatch(setBoards(newList));
+    } catch (err) {
+      alert(err);
+    }
+  };
   return (
     <>
       <Box
