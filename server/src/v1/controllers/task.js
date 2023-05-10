@@ -2,6 +2,7 @@ const Task = require("../models/task");
 const Section = require("../models/section");
 
 exports.create = async (req, res) => {
+  console.log("123");
   const { sectionId } = req.body;
   try {
     const section = await Section.findById(sectionId);

@@ -1,3 +1,4 @@
+import { AddOutlined, DeleteOutlined } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -10,7 +11,8 @@ import {
 import React, { useEffect, useState } from "react";
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import sectionApi from "../../api/sectionApi";
-import { AddOutlined, DeleteOutlined } from "@mui/icons-material";
+import taskApi from "../../api/taskApi";
+import TaskModal from "./TaskModal";
 
 let timer;
 const Kanban = ({ boardId, sections }) => {
@@ -21,7 +23,44 @@ const Kanban = ({ boardId, sections }) => {
     setData(sections);
   }, [sections]);
 
-  const onDragEnd = async ({ source, destination }) => {};
+  const onDragEnd = async ({ source, destination }) => {
+    if (!destination) return;
+    const sourceColIndex = data.findIndex((e) => e.id === source.droppableId);
+    const destinationColIndex = data.findIndex(
+      (e) => e.id === destination.droppableId
+    );
+    const sourceCol = data[sourceColIndex];
+    const destinationCol = data[destinationColIndex];
+
+    const sourceSectionId = sourceCol.id;
+    const destinationSectionId = destinationCol.id;
+
+    const sourceTasks = [...sourceCol.tasks];
+    const destinationTasks = [...destinationCol.tasks];
+
+    if (source.droppableId !== destination.droppableId) {
+      const [removed] = sourceTasks.splice(source.index, 1);
+      destinationTasks.splice(destination.index, 0, removed);
+      data[sourceColIndex].tasks = sourceTasks;
+      data[destinationColIndex].tasks = destinationTasks;
+    } else {
+      const [removed] = destinationTasks.splice(source.index, 1);
+      destinationTasks.splice(destination.index, 0, removed);
+      data[destinationColIndex].tasks = destinationTasks;
+    }
+
+    try {
+      await taskApi.updatePosition(boardId, {
+        resourceList: sourceTasks,
+        destinationList: destinationTasks,
+        resourceSectionId: sourceSectionId,
+        destinationSectionId: destinationSectionId,
+      });
+      setData(data);
+    } catch (err) {
+      alert(err);
+    }
+  };
 
   const createSection = async () => {
     try {
@@ -58,7 +97,37 @@ const Kanban = ({ boardId, sections }) => {
     }, 500);
   };
 
-  const createTask = async (sectionId) => {};
+  const createTask = async (sectionId) => {
+    try {
+      const task = await taskApi.create(boardId, { sectionId });
+      const newData = [...data];
+      const index = newData.findIndex((e) => e.id === sectionId);
+      newData[index].tasks.unshift(task);
+      setData(newData);
+    } catch (err) {
+      alert(err);
+    }
+  };
+
+  const onUpdateTask = (task) => {
+    const newData = [...data];
+    const sectionIndex = newData.findIndex((e) => e.id === task.section.id);
+    const taskIndex = newData[sectionIndex].tasks.findIndex(
+      (e) => e.id === task.id
+    );
+    newData[sectionIndex].tasks[taskIndex] = task;
+    setData(newData);
+  };
+
+  const onDeleteTask = (task) => {
+    const newData = [...data];
+    const sectionIndex = newData.findIndex((e) => e.id === task.section.id);
+    const taskIndex = newData[sectionIndex].tasks.findIndex(
+      (e) => e.id === task.id
+    );
+    newData[sectionIndex].tasks.splice(taskIndex, 1);
+    setData(newData);
+  };
 
   return (
     <>
@@ -145,6 +214,7 @@ const Kanban = ({ boardId, sections }) => {
                         <DeleteOutlined />
                       </IconButton>
                     </Box>
+                    {/* Task */}
                     {section.tasks.map((task, index) => (
                       <Draggable
                         key={task.id}
@@ -180,6 +250,13 @@ const Kanban = ({ boardId, sections }) => {
           ))}
         </Box>
       </DragDropContext>
+      <TaskModal
+        task={selectedTask}
+        boardId={boardId}
+        onClose={() => setSelectedTask(undefined)}
+        onUpdate={onUpdateTask}
+        onDelete={onDeleteTask}
+      />
     </>
   );
 };
